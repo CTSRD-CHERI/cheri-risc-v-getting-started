@@ -1,0 +1,438 @@
+\documentclass[12pt,twoside,openright,a4paper]{article}
+\setlength{\oddsidemargin}{-0.4mm} % 25 mm left margin
+\setlength{\evensidemargin}{\oddsidemargin}
+\setlength{\textwidth}{160mm}      % 25 mm right margin
+\setlength{\topmargin}{-5.4mm}     % 20 mm top margin
+\setlength{\headheight}{5mm}
+\setlength{\headsep}{5mm}
+\setlength{\footskip}{10mm}
+\setlength{\textheight}{237mm}     % 20 mm bottom margin
+
+%\documentclass[11pt]{article}
+%\usepackage[UKenglish]{isodate}%UK date endian
+\usepackage[headings]{fullpage}
+\usepackage[hidelinks]{hyperref}
+
+\usepackage{bytefield}
+\usepackage{color}
+\usepackage[scaled=0.8]{DejaVuSansMono}
+\usepackage[T1]{fontenc}
+\usepackage{listings}
+\usepackage{subcaption}
+\usepackage{times}
+\usepackage{url}
+\usepackage[svgnames]{xcolor}
+\definecolor{lightgray}{gray}{0.8}
+\usepackage{xspace}
+\usepackage{xfrac}
+
+\usepackage{cleveref}
+
+\renewcommand{\UrlFont}{\ttfamily\small}
+
+\newcommand{\baselineboxformatting}[1]{%
+  % Measure size of contents
+  \sbox0{#1}%
+  % Use the difference between the contents' height and the bitbox's height,
+  % clamped to [-.44\baselineskip, 0], as our minimum depth.
+  \setlength{\skip0}{\ht0 - \height}%
+  \ifdim\skip0>0pt%
+    \setlength{\skip0}{0}%
+  \else%
+    \ifdim\skip0<-.44\baselineskip%
+      \setlength{\skip0}{-.44\baselineskip}%
+    \fi%
+  \fi%
+  \centering\rule[\skip0]{0pt}{\height}#1}
+\bytefieldsetup{boxformatting=\baselineboxformatting}
+
+\lstset{basicstyle=\footnotesize\ttfamily}
+%\newcommand{\ccode}[1]{\lstinline[language={C}]{#1}}
+%\newcommand{\cxxcode}[1]{\lstinline[language={C++}]{#1}}
+\newcommand{\ccode}[1]{{\small\ttfamily{#1}}}
+\newcommand{\cxxcode}[1]{{\ccode{#1}}}
+\newcommand{\cconst}[1]{{\ccode{#1}}}
+\newcommand{\cfunc}[1]{{\ccode{#1()}}}
+\newcommand{\cvar}[1]{{\ccode{#1}}}
+\newcommand{\pathname}[1]{{\ccode{#1}}}
+\newcommand{\commandline}[1]{{\ccode{#1}}}
+
+\newcommand{\ptrdifft}{{\ccode{ptrdiff\_t}}\xspace}
+\newcommand{\sizet}{{\ccode{size\_t}}\xspace}
+\newcommand{\ssizet}{{\ccode{ssize\_t}}\xspace}
+\newcommand{\vaddrt}{{\ccode{vaddr\_t}}\xspace}
+\newcommand{\cuintptrt}{{\ccode{uintptr\_t}}\xspace}
+\newcommand{\cintptrt}{{\ccode{intptr\_t}}\xspace}
+\newcommand{\ccharstar}{{\ccode{char *}}\xspace}
+\newcommand{\cvoidstar}{{\ccode{void *}}\xspace}
+\newcommand{\clongt}{{\ccode{long}}\xspace}
+\newcommand{\cintt}{{\ccode{int}}\xspace}
+\newcommand{\cintttt}{{\ccode{int32\_t}}\xspace}
+\newcommand{\cintsft}{{\ccode{int64\_t}}\xspace}
+
+\newcommand{\SIGPROT}{{\ccode{SIGPROT}}\xspace}
+
+\newcommand{\note}[2]{{\color{blue}[ Note: #1 - #2]}}
+\renewcommand{\note}[2]{\relax\ifhmode\unskip\fi}
+\newcommand{\arnote}[1]{\note{#1}{Alex R.}}
+\newcommand{\bdnote}[1]{\note{#1}{Brooks D.}}
+\newcommand{\rwnote}[1]{\note{#1}{Robert W.}}
+\newcommand{\amnote}[1]{\note{#1}{Alfredo M.}}
+\newcommand{\psnote}[1]{\note{#1}{Peter S.}}
+\newcommand{\pgnnote}[1]{\note{#1}{Peter N.}}
+\newcommand{\jrtcnote}[1]{\note{#1}{Jess C.}}
+
+\hyphenation{Free-BSD}
+\hyphenation{Free-RTOS}
+\hyphenation{Cheri-BSD}
+\hyphenation{Cheri-Free-RTOS}
+\hyphenation{Cheri-ABI}
+\hyphenation{Web-Kit}
+
+\title{Getting Started with CHERI-RISC-V (DRAFT)}
+\author{Robert N. M. Watson and Sundry Other Authors and Contributors}
+
+\begin{document}
+\sloppy
+
+%% CL tech-report format provides its own cover page.  Comment for final
+%% version.
+\maketitle
+
+%% CL tech-report format requires page numbering to start at 3.  Uncomment for
+%% final version.
+%\setcounter{page}{3}
+%%
+
+%
+% Keep Abstract in sync with the Introduction.
+%
+\begin{abstract}
+This document is a brief introduction to the CHERI-RISC-V ISA, toolchain,
+QEMU emulator, and software stack.
+It is intended as a starting point for those wishing to experiment with
+CHERI-RISC-V, and complements other reports such as the Introduction to CHERI,
+the CHERI ISA Specification, and the CHERI Pure-Capability C/C++ Programming
+Guide.
+\end{abstract}
+
+\newpage
+\setcounter{tocdepth}{2}
+\tableofcontents
+
+\newpage
+
+\section{Introduction}
+
+%
+% Keep Abstract in sync with the Introduction.
+%
+This document is a brief introduction to the CHERI-RISC-V ISA, toolchain,
+QEMU emulator, and software stack.
+It is intended as a starting point for those wishing to experiment with
+CHERI-RISC-V, and complements other reports such as the CHERI ISA
+specification and CHERI C/C++ pure-capability programming guide.
+This document is a brief introduction to the pure-capability CHERI C/C++
+programming languages.
+
+\section{CHERI}
+
+CHERI extends conventional processor Instruction-Set Architectures (ISAs) with
+support for \textit{architectural capabilities}.
+One important use for this new hardware data type is in the implementation
+of safer C/C++ pointers and the code or data they point at.
+Our technical report, \textit{An Introduction to CHERI}, provides a high-level
+overview of the CHERI architecture, ISA modeling, hardware implementations,
+and software stack~\cite{UCAM-CL-TR-941}.
+
+\subsection{CHERI capabilities}
+
+\begin{figure}[b]
+\hspace{2.5cm}
+% Tag
+\begin{subfigure}[t!]{0.1\textwidth}
+\begin{bytefield}[bitwidth=3pt]{1}
+% \bitheader[endianness=big]{~,~} \\
+\begin{leftwordgroup}{1-bit tag}
+\bitbox{1}{}
+\end{leftwordgroup}
+\end{bytefield}
+\end{subfigure}
+% Capability
+\begin{subfigure}[t!]{0.1\textwidth}
+\begin{bytefield}[bitwidth=3pt]{64}
+\bitheader[endianness=big]{0,63} \\
+\begin{rightwordgroup}{128-bit \\ in-memory \\ capability}
+\bitbox{16}{perms} & \bitbox{3}{\color{lightgray}\rule{\width}{\height}} & \bitbox{15}{otype} & \bitbox{30}{bounds} \\
+\bitbox[lrb]{64}{64-bit~address}
+\end{rightwordgroup}
+\end{bytefield}
+\end{subfigure}
+\caption{128-bit CHERI Concentrate capability representation: 64-bit address
+  and metadata in addressable memory; and 1-bit out-of-band tag.}
+\label{figure:cheri-capability-representation}
+\end{figure}
+
+CHERI capabilities are twice the width of the native integer pointer type of
+the baseline architecture: there are 128-bit capabilities on 64-bit platforms,
+and 64-bit capabilities on 32-bit platforms.
+Each capability consists of an integer (virtual) address of the natural size for
+the architecture (e.g., 32 or 64 bit), and also additional metadata that is
+compressed in order to fit in the remaining 32 or 64 bits of the capability
+(see \Cref{figure:cheri-capability-representation}).
+In addition, they are associated with a 1-bit validity ``tag'' whose value is
+maintained in registers and memory by the architecture.
+Each element of the capability contributes to the protection model:
+
+\begin{description}
+\item[Validity tag] The tag tracks the validity of a capability.
+  If invalid, the capability cannot be used for load, store, instruction
+  fetch, or other operations.
+  It is still possible to extract fields from an invalid capability,
+  including its address.
+  Subject to precision limits of the bounds compression model, a capability's
+  address (i.e., where it points) can be changed while maintaining the
+  validity tag.
+
+\item[Bounds] The lower and upper bounds are addresses restricting the
+  portion of the address space within which the capability can be used for
+  load, store, and instruction fetch.
+
+\item[Permissions] The permissions mask controls how the capability can be
+  used -- for example, by providing loading and storing of data and/or
+  capabilities.
+
+\item[Object type] If not equal to $-1$, the capability is ``sealed'' and
+  cannot be modified or dereferenced, but can be used to implement opaque
+  pointer types.
+  This feature is not described further in this document, as it is primarily
+  used to implement software compartmentalization rather than object-level
+  memory protection.
+\end{description}
+
+When stored in memory, valid capabilities must be naturally aligned -- i.e., at
+64-bit or 128-bit boundaries, depending on capability size -- as that is the
+granularity at which in-memory tags are maintained.
+Partial or complete overwrites with data, rather than a complete overwrite
+with a valid capability, lead to the in-memory tag being cleared, preventing
+corrupted capabilities from later being dereferenced.
+
+In order to reduce the memory footprint of capabilities, capability
+compression is used to reduce the overhead of bounds so that the full
+capability, including address, permissions, and bounds fits within 128
+bits (plus the 1-bit out-of-band tag).
+Bounds compression takes advantage of redundancy between the address
+and the bounds, which occurs because a pointer typically falls within (or
+close to) its associated allocation, and because allocations are typically
+well aligned.
+The compression scheme uses a floating-point representation, allowing high-precision bounds for small
+objects, but requiring stronger alignment and padding for larger allocations.
+
+\subsection{Architectural rules for capability use}
+
+The architecture enforces several important security properties on changes to
+this metadata:
+
+\begin{description}
+\item[Provenance validity] ensures that capabilities can be used -- for
+  load, store, instruction fetch, etc., -- only if they are derived via valid
+  transformations of valid capabilities.
+  This property holds for capabilities in both registers and memory.
+
+% \item[Capability integrity] prevents direct in-memory manipulation of
+%   capabilities.  (Although this property is subsumed
+%   under the previous property, it seems worth stating on its own.)
+% \pgnnote{Does that added sentence work?}
+% \rwnote{I'm not really sure that that helps.}
+
+%  \psnote{As they are stated above, ``provenance validity'' 
+%    subsumes ``capability integrity'', which is a bit confusing.  One
+%    could just lose the latter, or (I suppose) split ``provenance
+%    validity'' into the case of capability construction in registers,
+%    via loads and register
+%    operations and the case of capability (de)construction in memory,
+%    via good and bad store operations}
+
+%  \psnote{As stated above, ``provenance validity'' involves both the
+%    construction and use of capabilities. Think that's ok, but a
+%    different slicing of the concepts would be to have it just be
+%    construction.   If sticking with ``can be used'', then somehow the
+%    text should be elaborated to not forbid use in non-authorising
+%    ways, e.g., ``using'' a possibly-non-valid capability by pulling
+%    out its address}
+  
+\item[Monotonicity] requires that any capability derived from another
+  cannot exceed the permissions and bounds of the capability from which it was derived.
+
+% \psnote{That's a bit odd, as a capability is really just a pure
+%   value, not a mutable thing.  A better (but still a bit fuzzy)
+%   statement would be something like ``Monotonicity ensures that a
+%   valid capability can only be constructed from another capability
+%   with the same or greater authority''.  
+% Beyond that, one should talk not just about monotonicity of capability
+% construction, but monotonicity of the set of all \emph{reachable
+%   capabilities} -- compare with the cheri\_formal\_paper Section IV. }
+% \rwnote{This comment partially addressed.}
+% \rwnote{This report does not discuss compartmentalisation at all, so is
+% uninterested in the other definition of monotonicity.}
+  
+\end{description}
+
+At boot time, the architecture provides initial capabilities to the firmware,
+allowing data access and instruction fetch across the full address space.
+Additionally, all tags are cleared in memory.
+Further capabilities can then be derived (in accordance with the monotonicity
+property) as they are passed from firmware to boot loader, from boot loader to
+hypervisor, from hypervisor to the OS, and from the OS to the application.
+At each stage in the derivation chain, bounds and permissions may be
+restricted to further limit access.
+For example, the OS may assign capabilities for only a limited portion of the
+address space to the user software, preventing use of other portions of the
+address space.
+
+% These capabilities describe the set of memory access permissions held by each
+% software component.
+
+%The initial capabilities are then
+%  derived from existing valid capabilities, in accordance with the monotonicity
+%  property;
+% \pgnnote{This seems cleaner.}
+% \rwnote{More clear but less correct -- the initial capabilities are never
+%   derived from other capabilities.}
+
+Similarly, capabilities carry with them \textit{intentionality}: when a
+process passes a capability as an argument to a system call, the OS kernel can
+carefully use only that capability to ensure that it does not access other
+process memory that was not intended by the user process -- even though the
+kernel may in fact have permission to access the entire address space through
+other capabilities it holds.
+This is important as it prevents ``confused deputy'' problems, in which a more
+privileged party uses an excess of privilege when acting on behalf of a less
+privileged party, performing operations that were not intended to be
+authorized.
+For example, this prevents the kernel from overflowing the bounds on a
+userspace buffer when a pointer to the buffer is passed as a
+system-call argument.
+
+These architectural properties provide the foundation on which a
+capability-based OS, compiler, and runtime can implement C/C++-language memory
+safety.
+
+\section{The CHERI-RISC-V ISA}
+
+\textbf{Brief summary with pointers to ISA spec, table of instructions,
+  perhaps illustrative comparisons between some RISC-V code and some CHERI
+  code.}
+
+\section{cheribuild}
+
+\textbf{Brief intro to cheribuild, where to get it, how to keep it up-to-date
+  and why.}
+
+\section{CHERI-QEMU}
+
+\textbf{Building, using.}
+
+\section{CHERI-RISC-V Clang/LLVM/LLD}
+
+\textbf{Building, using.  Including how to compile for CheriABI on CheriBSD.}
+
+\section{CHERI GDB}
+
+\textbf{Building, CHERI-specific things.}
+
+\section{CheriBSD/RISC-V}
+
+\textbf{Building, booting, using.  Short command line to generate an image
+  suitable to use with CHERI-QEMU.}
+
+\section{CHERI-RISC-V Cores on FPGA}
+
+\textbf{Table of cores, brief summary.  It is not the aim to describe how to
+  get them running here, but it will be useful information for those using
+  CHERI-RISC-V cores as part of FETT, etc.}
+
+\section{Further reading}
+\label{sec:further_reading}
+
+\textbf{XXXRW: To update for this report.}
+
+The primary reference for the CHERI Instruction-Set Architecture (ISA) is the
+ISA specification; at the time of writing, the most recent version is CHERI
+ISAv7~\cite{UCAM-CL-TR-927}:
+
+\smallskip
+\noindent
+\url{https://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-927.pdf}
+\smallskip
+
+\noindent
+Our technical report, \textit{An Introduction to CHERI}, provides a high-level
+overview of the CHERI architecture, ISA modeling, hardware implementations,
+and software stack~\cite{UCAM-CL-TR-941}:
+
+\smallskip
+\noindent
+\url{https://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-941.pdf}
+\smallskip
+
+\noindent
+We published a paper on idiomatic C and spatial memory protection at ASPLOS
+2015~\cite{ChisnallCPDP11}:
+
+\smallskip
+\noindent
+\url{https://www.cl.cam.ac.uk/research/security/ctsrd/pdfs/201503-asplos2015-cheri-cmachine.pdf}
+\smallskip
+
+\noindent
+We published a paper on CheriABI and the adaptation of a complete OS userspace
+and application suite to a pure-capability process environment at ASPLOS
+2019~\cite{davis2019:cheriabi}:
+
+\smallskip
+\noindent
+\url{https://www.cl.cam.ac.uk/research/security/ctsrd/pdfs/201904-asplos-cheriabi.pdf}
+\smallskip
+
+\noindent
+We also released an extended technical-report version of this paper that
+includes greater implementation detail~\cite{UCAM-CL-TR-932}:
+
+\smallskip
+\noindent
+\url{https://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-932.pdf}
+\smallskip
+
+\noindent
+We published a paper on CHERI and temporal memory safety for the heap at
+Oakland 2020~\cite{filardo:cornucopia}:
+
+\smallskip
+\noindent
+\url{https://www.cl.cam.ac.uk/research/security/ctsrd/pdfs/2020oakland-cornucopia.pdf}
+\smallskip
+
+%\textbf{XXX: Any other pointers?}
+
+\section{Acknowledgements}
+
+\textbf{XXXRW: To update}
+
+We gratefully acknowledge the helpful feedback from our colleagues, including
+Peter G. Neumann, John Baldwin, Peter Sewell, Brett
+Gutstein, Alfredo Mazzinghi, Simon W. Moore, Lee Smith, and Paul Gotch.
+This work was supported by the Defense Advanced Research Projects Agency (DARPA) and the Air Force Research Laboratory (AFRL), under contracts
+FA8750-10-C-0237 (``CTSRD'') and HR0011-18-C-0016 (``ECATS'').
+The views, opinions, and/or findings contained in this report are those of the authors and should not be interpreted as representing the official views or policies of the Department of Defense or the U.S. Government.
+This work was supported in part by the Innovate UK project Digital Security by
+Design (DSbD) Technology Platform Prototype, 105694.
+We also acknowledge the EPSRC REMS Programme Grant (EP/K008528/1), the
+ERC ELVER Advanced Grant (789108), Arm Limited,
+HP Enterprise, and Google, Inc.
+Approved for Public Release, Distribution Unlimited.
+
+\bibliographystyle{abbrv}
+\bibliography{cheri}
+
+\end{document}
