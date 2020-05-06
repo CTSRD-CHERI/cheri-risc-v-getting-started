@@ -346,6 +346,76 @@ safety.
 \textbf{Building, booting, using.  Short command line to generate an image
   suitable to use with CHERI-QEMU.}
 
+\section{CHERI-RTEMS}
+RTEMS is free open source software that supports multi-processor
+systems for over a dozen CPU architectures and over 150 specific
+system boards. In addition, RTEMS is designed to support embedded
+applications with the most stringent real-time requirements while
+being compatible with open standards such as POSIX. RTEMS includes
+optional functional features such as TCP/IP and file systems while
+still offering minimum executable sizes under 20 KB in useful
+configurations.\\
+
+
+There are over 500 RTEMS applications including benchmarks and tests.
+Furthermore, there is a recent project called \textit{libbsd} that reuses
+the FreeBSD's TCP/IP stack, drivers and applications within RTEMS. Hence,
+it would be convenient to share some codebase between CHERI-RTEMS and
+CheriBSD. \\
+
+CHERI-RTEMS is a prototype of RTEMS adapted to be built and run in purecap
+mode. The sample applications can run on CHERI-Spike, CHERI-QEMU, and FPGA.
+The port is based on \textit{rv64imafdc} architecture.
+
+\subsection{Building}
+The easiest way to build CHERI-RTEMS is from the cheribuild project using
+the following command:
+
+\begin{lstlisting}
+./cheribuild.py rtems -d
+\end{lstlisting}
+
+This command will build and install CHERI-RTEMS and all of its dependencies (if required)
+such as Clang/LLVM/LLD, newlib and compiler-rt. The output of running this command is
+ELF executables. Each ELF is a stand-alone bootable image of a CHERI-RTEMS
+kernel and an application. A brief description of the frequently used sample
+applications is as follows:
+\begin{itemize}
+	\item \textbf{hello}: A Hello World application with a single RTEMS task. It only needs
+	a console driver and does not require timers or interrupts.
+	\item \textbf{ticker}: An application that demonstrates the use of 3 RTEMS tasks being
+	context-switched while using a timer to sleep and wake up. This application tests the
+	most critical parts of RTEMS such as interrupt handling, context switching, and console and
+	clock drivers.
+	\item \textbf{capture}: A simple RTEMS shell that can be used to print information about
+	the run-time system resources such as the number of tasks, drivers, semaphores and other
+	RTEMS managers.
+\end{itemize}
+
+cheribuild will build and install the CHERI-RTEMS sample applications for 3 BSPs: CHERI-Spike,
+CHERI-QEMU, and FPGA (GFE-P2).
+
+\subsection{Running}
+
+CHERI-RTEMS can run on CHERI-Spike and CHERI-QEMU. Both can be build from cheribuild:
+
+\begin{lstlisting}
+./cheribuild.py spike
+./cheribuild.py qemu
+\end{lstlisting}
+
+To run on Spike:
+
+\begin{lstlisting}[breaklines]
+spike $PATH_INSTALLED_RTEMS/rv64imafdcxcheri_medany/testsuites/samples/ticker.exe
+\end{lstlisting}
+
+To run on CHERI-QEMU:
+
+\begin{lstlisting}[breaklines]
+qemu-system-riscv64cheri -nographic -M virt -bios $PATH_INSTALLED_RTEMS/rv64xcheri_qemu/testsuites/samples/ticker.exe
+\end{lstlisting}
+
 \section{CHERI-RISC-V Cores on FPGA}
 
 \textbf{Table of cores, brief summary.  It is not the aim to describe how to
