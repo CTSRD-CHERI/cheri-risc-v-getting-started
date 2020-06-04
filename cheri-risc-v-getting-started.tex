@@ -346,6 +346,62 @@ safety.
 \textbf{Building, booting, using.  Short command line to generate an image
   suitable to use with CHERI-QEMU.}
 
+\section{CheriFreeRTOS}
+CheriFreeRTOS is a version of the open-source FreeRTOS embedded operating
+system that has been extended to support CHERI memory protection.
+CheriFreeRTOS is compiled as a pure-capability binary, and includes
+strong hardware-supported spatial memory protection and pointer protection
+for the stack, heap, and global variables.\\
+
+FreeRTOS' source code structure is divided into two main directories:
+
+\begin{itemize}
+	\item \textbf{Source:} Contains architecture-independent implementation
+	 of OS services such as of threading, scheduling, memory management,
+	 queues, etc. The architecture-dependent code goes into the
+	 \textit{portable} sub-directory.
+	\item \textbf{Demo:} Contains both application code and device drivers
+	for a specific hardware board or platform. Each Demo has a Makefile
+	that specifies the source files are required for it from
+	\textit{Source} and \textit{Demo} directories (and optionally other
+	directories as well). The final target is a single executable file.
+
+\end{itemize}
+
+In CheriFreeRTOS, we have ported both Source and two Demos to work
+in pure-capability mode. The two Demos are:
+
+\begin{itemize}
+	\item \textbf{RISC-V-Generic:} This is a generic parameterized Demo
+	 that can be built and run on simulators such as Spike, QEMU, and
+	 Sail. It only has the bare minimum drivers such as console and
+		 timer to run the FreeRTOS \textit{blinky} Demo.
+	\item \textbf{RISC-V\_Galois\_P1:} This is a more sophisticated Demo
+	that is intended to run on VCU-118 FPGA board. It has a collection
+	of device drivers such as UART and Ethernet and a few FreeRTOS
+	applications including \textit{netboot} and \textit{blinky}.
+\end{itemize}
+
+\subsection{Building and Running}
+
+cheribuild has support for building CheriFreeRTOS and running it on our
+CHERI-QEMU.
+
+\begin{lstlisting}
+./cheribuild.py freertos-baremetal-riscv64-purecap -d
+\end{lstlisting}
+
+This command builds CheriFreeRTOS and its compiler-rt and newlib dependecies,
+all in pure-capability mode. It builds both demos discussed earlier.\\
+
+An example command to run the \textit{RISC-V-Generic's } \textit{blinky}
+demo on CHERI-QEMU is:
+
+\begin{lstlisting}
+./cheribuild.py run-freertos-baremetal-riscv64-purecap
+\end{lstlisting}
+
+
 \section{CHERI-RTEMS}
 RTEMS is free open source software that supports multi-processor
 systems for over a dozen CPU architectures and over 150 specific
